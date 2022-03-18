@@ -1,0 +1,22 @@
+{
+  "name": "micro-spark",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Small but complete http server framework without any external dependencies.",
+  "license": "MIT",
+  "author": "Ai Chen",
+  "homepage": "https://github.com/seatwork",
+  "repository": "https://github.com/seatwork/node-spark.git",
+  "url": "https://github.com/seatwork/node-spark",
+
+  "scripts": {
+    "test": "node test/index.js"
+  },
+  "keywords": [
+    "micro-server",
+    "http-server",
+    "template-engine",
+    "radix-tree",
+    "restful-api"
+  ]
+}

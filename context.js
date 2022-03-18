@@ -47,6 +47,10 @@ export class Context {
     return this.#url.pathname;
   }
 
+  get origin() {
+    return this.#url.origin;
+  }
+
   // Get request protocol
   get protocol() {
     return this.#getProtocol(this.#request);
@@ -60,6 +64,11 @@ export class Context {
   // Get params in route path
   get params() {
     return this.#params;
+  }
+
+  // Set params in route path
+  set params(p) {
+    Object.assign(this.#params, p);
   }
 
   // Get params in query string
@@ -91,6 +100,11 @@ export class Context {
     return this.#response.statusCode;
   }
 
+  // Set response status code
+  set status(s) {
+    this.#response.statusCode = (!s || s < 200 || s > 511) ? 200 : s;
+  }
+
   // Is headers sent?
   get sent() {
     return this.#response.headersSent;
@@ -109,16 +123,6 @@ export class Context {
       cookies.push(`httpOnly=true`);
     }
     this.set("Set-Cookie", cookies.join("; "));
-  }
-
-  // Set params in route path
-  params(p) {
-    Object.assign(this.#params, p);
-  }
-
-  // Set response status code
-  status(s) {
-    this.#response.statusCode = (!s || s < 200 || s > 511) ? 200 : s;
   }
 
   // Get request headers by name
@@ -148,7 +152,7 @@ export class Context {
 
   // Send response to client
   send(body, status) {
-    if (!this.status) this.status(status);
+    if (!this.status) this.status = status;
     if (this.sent) return;
 
     if (body === undefined || body === null) {

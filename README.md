@@ -55,17 +55,19 @@ new Spark()
 - `ctx.url` Get request full href
 - `ctx.protocol` Get request protocol
 - `ctx.host` Get request host
+- `ctx.origin` Get request origin
 - `ctx.headers` Get headers object
 - `ctx.cookies` Get cookies object
 - `ctx.status` Get response status code
+- `ctx.status=` Set response status code
 - `ctx.request` The native request object
 - `ctx.response` The native response object
 
 #### Methods
 
-- `ctx.status(code)` Set response status code
 - `ctx.get(name)` Get request headers by name
 - `ctx.set(name, value)` Set response headers
+- `ctx.cookie(name, value[, options])` Set cookies
 - `async ctx.json()` Get request body in json
 - `async ctx.text()` Get request body in text
 - `async ctx.buffer()` Get request body in buffer

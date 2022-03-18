@@ -52,7 +52,7 @@ export class Server {
         this.#app.router.find("ALL", ctx.path);
 
       if (route) {
-        ctx.params(route.params);
+        ctx.params = route.params;
         this.#declarePlugins(ctx);
 
         await this.#executeBefores(ctx);
@@ -93,7 +93,7 @@ export class Server {
     // : if-modified-since / Last-Modified
     const lastModified = stat.mtime.toUTCString();
     if (ctx.get("if-modified-since") == lastModified) {
-      ctx.status(304);
+      ctx.status = 304;
     } else {
       ctx.set("Last-Modified", lastModified);
       return fs.readFileSync(file);

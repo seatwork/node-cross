@@ -9,9 +9,6 @@
   "repository": "https://github.com/seatwork/node-spark.git",
   "url": "https://github.com/seatwork/node-spark",
 
-  "scripts": {
-    "test": "node test/index.js"
-  },
   "keywords": [
     "micro-server",
     "http-server",

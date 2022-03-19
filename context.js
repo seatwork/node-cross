@@ -10,6 +10,7 @@ module.exports = class Context {
   #request;
   #response;
   #url;
+  #status;
 
   #params = {};
   #query = {};
@@ -105,27 +106,26 @@ module.exports = class Context {
   }
 
   // Set response status code
-  set status(s) {
-    this.#response.statusCode = (!s || s < 200 || s > 511) ? 200 : s;
+  set status(status) {
+    this.#status = status;
   }
 
   // Get response status code
   get status() {
-    return this.#response.statusCode;
-  }
-
-  // Is headers sent?
-  get sent() {
-    return this.#response.headersSent;
+    const s = parseInt(this.#status);
+    return (isNaN(s) || s < 200 || s > 511) ? 200 : s;
   }
 
   // Set cookie (set value with null to delete cookie)
   cookie(name, value, options = {}) {
     const cookies = [`${name}=${value}`];
+    if (value === null) {
+      options.maxAge = 0;
+    }
     if (options.domain) {
       cookies.push(`domain=${options.domain}`);
     }
-    if (options.maxAge) {
+    if (options.maxAge !== undefined) {
       cookies.push(`max-age=${options.maxAge}`);
     }
     if (options.httpOnly) {
@@ -161,11 +161,11 @@ module.exports = class Context {
 
   // Send response to client
   send(body, status) {
-    if (!this.status) this.status = status;
-    if (this.sent) return;
+    if (this.#response.headersSent) return;
+    status = status || this.status;
+    this.#response.statusCode = status;
 
-    if (body === undefined || body === null ||
-      this.status === 204 || this.status === 304) {
+    if (body === undefined || body === null || status === 204 || status === 304) {
       return this.#response.end();
     }
     if (body instanceof Stream) {
@@ -181,8 +181,8 @@ module.exports = class Context {
   // Permanent redirect codes: 301 (default), 308
   // Temporary redirect codes: 302，303，307
   redirect(url, status = 301) {
-    this.response.writeHead(status, { Location: url });
-    this.response.end();
+    this.#response.writeHead(status, { Location: url });
+    this.#response.end();
   }
 
   // Render template with a file

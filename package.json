@@ -1,6 +1,6 @@
 {
   "name": "micro-spark",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "A tiny but complete http server framework without any external dependencies.",
   "license": "MIT",
   "author": "Ai Chen",

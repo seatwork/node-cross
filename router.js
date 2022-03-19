@@ -2,7 +2,7 @@
  * Router object for adding and finding routes
  * based on radix tree.
  */
-export class Router {
+module.exports = class Router {
 
   // In view of the fact that x/router does not implement the
   // parsing function of the request method, this framework
@@ -47,7 +47,7 @@ export class Router {
  * @author https://github.com/zhmushan/router
  * @import https://deno.land/x/router@v2.0.1/mod.ts
  */
-export class Radix {
+class Radix {
 
   path = "";
   children = new Map();

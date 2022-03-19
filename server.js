@@ -1,7 +1,7 @@
-import fs from "fs";
-import Http from "http";
-import { extname, resolve } from "path";
-import { Context } from "./context.js";
+const Http = require("http");
+const fs = require("fs");
+const { extname, resolve } = require("path");
+const Context = require("./context.js");
 
 const MIME = {
   ".htm": "text/html; charset=utf-8",
@@ -9,33 +9,64 @@ const MIME = {
   ".xml": "text/xml; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
+  ".log": "text/plain; charset=utf-8",
+  ".ini": "text/plain; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8",
+  ".yaml": "text/yaml; charset=utf-8",
+  ".yml": "text/yaml; charset=utf-8",
+  ".conf": "text/plain; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".jsx": "text/jsx; charset=utf-8",
+  ".ts": "text/typescript; charset=utf-8",
+  ".tsx": "text/tsx; charset=utf-8",
+  ".mjs": "application/javascript; charset=utf-8",
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".gif": "image/gif",
+  ".webp": "image/webp",
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".tif": "image/tiff",
-  ".mp3": "audio/mpeg",
+  ".heic": "image/heic",
+  ".heif": "image/heif",
+  ".mid": "audio/midi",
+  ".midi": "audio/midi",
+  ".mp3": "audio/mp3",
+  ".mp4a": "audio/mp4",
+  ".m4a": "audio/mp4",
+  ".ogg": "audio/ogg",
+  ".wav": "audio/wav",
+  ".webm": "audio/webm",
+  ".aac": "audio/x-aac",
+  ".flac": "audio/x-flac",
   ".mp4": "video/mp4",
+  ".mp4v": "video/mp4",
+  ".mkv": "video/x-matroska",
+  ".mov": "video/quicktime",
+  ".otf": "font/otf",
   ".ttf": "font/ttf",
   ".woff": "font/woff",
   ".woff2": "font/woff2",
-  ".json": "application/json",
+  ".jar": "application/java-archive",
+  ".war": "application/java-archive",
+  ".gz": "application/gzip",
   ".zip": "application/zip",
 };
 
 // HTTP server class
-export class Server {
+// for handling requests and static resources
+module.exports = class Server {
   #app;
 
   constructor(app) {
     this.#app = app;
   }
 
-  // Create http server
+  // Create http server on default port 3000
   run(port = 3000) {
-    const server = Http.createServer(this.#handleRequest.bind(this));
+    const server = Http.createServer(this.#dispatch.bind(this));
     server.listen(port, () => {
       console.log(`\x1b[90m[Spark] Node version: ${process.version}\x1b[0m`);
       console.log(`\x1b[90m[Spark] Reference: https://github.com/seatwork/node-spark\x1b[0m`);
@@ -44,7 +75,7 @@ export class Server {
   }
 
   // Handle dynamic requests
-  async #handleRequest(request, response) {
+  async #dispatch(request, response) {
     const ctx = new Context(request, response);
     try {
       const route =
@@ -69,7 +100,7 @@ export class Server {
   }
 
   // Handle static resource requests
-  handleStatic(ctx) {
+  serve(ctx) {
     // Removes the leading slash and converts relative path to absolute path
     const file = resolve(ctx.path.replace(/^\/+/, ""));
     if (!fs.existsSync(file)) {
@@ -91,7 +122,10 @@ export class Server {
 
     // Handling 304 status with negotiation cache
     // : if-modified-since / Last-Modified
-    const lastModified = stat.mtime.toUTCString();
+    const lastModified = stat.mtime instanceof Date
+      ? stat.mtime.toUTCString()
+      : new Date(stat.mtime).toUTCString();
+
     if (ctx.get("if-modified-since") == lastModified) {
       ctx.status = 304;
     } else {
@@ -100,6 +134,7 @@ export class Server {
     }
   }
 
+  // Declare plugins to ctx
   #declarePlugins(ctx) {
     const plugins = this.#app.plugins;
     Object.keys(plugins).forEach(name => {
@@ -111,6 +146,7 @@ export class Server {
     })
   }
 
+  // Execute before middlewares
   async #executeBefores(ctx) {
     const befores = this.#app.befores;
     for (const middleware of befores) {
@@ -118,6 +154,7 @@ export class Server {
     }
   }
 
+  // Execute after middlewares
   async #executeAfters(ctx) {
     const afters = this.#app.afters;
     for (const middleware of afters) {

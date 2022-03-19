@@ -1,11 +1,11 @@
-import fs from "fs";
-import { resolve } from "path";
-import { Stream } from "stream";
-import { template } from "./engine.js";
+const fs = require("fs");
+const { resolve } = require("path");
+const { Stream } = require("stream");
+const { template } = require("./engine");
 
 // Context of application
 // extends request and response
-export class Context {
+module.exports = class Context {
 
   #request;
   #response;
@@ -24,10 +24,12 @@ export class Context {
     }
   }
 
+  // Get native request object
   get request() {
     return this.#request;
   }
 
+  // Get native response object
   get response() {
     return this.#response;
   }
@@ -35,20 +37,6 @@ export class Context {
   // Get request method
   get method() {
     return this.#request.method;
-  }
-
-  // Get request full href
-  get url() {
-    return this.protocol + "://" + this.host + this.#request.url;
-  }
-
-  // Get request path
-  get path() {
-    return this.#url.pathname;
-  }
-
-  get origin() {
-    return this.#url.origin;
   }
 
   // Get request protocol
@@ -61,9 +49,24 @@ export class Context {
     return this.#request.headers.host;
   }
 
-  // Get params in route path
-  get params() {
-    return this.#params;
+  // Get request full href
+  get url() {
+    return this.protocol + "://" + this.host + this.#request.url;
+  }
+
+  // Get request path
+  get path() {
+    return this.#url.pathname;
+  }
+
+  // Get request origin
+  get origin() {
+    return this.#url.origin;
+  }
+
+  // Get request hostname
+  get hostname() {
+    return this.#url.hostname;
   }
 
   // Set params in route path
@@ -71,11 +74,17 @@ export class Context {
     Object.assign(this.#params, p);
   }
 
+  // Get params in route path
+  get params() {
+    return this.#params;
+  }
+
   // Get params in query string
   get query() {
     return this.#query;
   }
 
+  // Get all request headers
   get headers() {
     return this.#request.headers;
   }
@@ -95,14 +104,14 @@ export class Context {
     return cookies;
   }
 
-  // Get response status code
-  get status() {
-    return this.#response.statusCode;
-  }
-
   // Set response status code
   set status(s) {
     this.#response.statusCode = (!s || s < 200 || s > 511) ? 200 : s;
+  }
+
+  // Get response status code
+  get status() {
+    return this.#response.statusCode;
   }
 
   // Is headers sent?
@@ -155,7 +164,8 @@ export class Context {
     if (!this.status) this.status = status;
     if (this.sent) return;
 
-    if (body === undefined || body === null) {
+    if (body === undefined || body === null ||
+      this.status === 204 || this.status === 304) {
       return this.#response.end();
     }
     if (body instanceof Stream) {
@@ -197,32 +207,26 @@ export class Context {
     throw error;
   }
 
+  // Get request protocol
   #getProtocol(req) {
     let proto = req.connection.encrypted ? "https" : "http";
     proto = req.headers["x-forwarded-proto"] || proto; // only do this if you trust the proxy
     return proto.split(",")[0];
   }
 
+  // Parse raw body
   #rawbody(type) {
     return new Promise((resolve, reject) => {
       const buffer = [];
-      this.#request.on("data", chunk => {
-        buffer.push(chunk);
-      });
-      this.#request.on("error", err => {
-        reject(err);
-      });
+      this.#request.on("data", chunk => buffer.push(chunk));
+      this.#request.on("error", err => reject(err));
       this.#request.on("end", () => {
         if (type === "buffer") {
-          resolve(buffer);
-        } else {
-          const body = Buffer.concat(buffer).toString("utf8");
-          if (type === "json") {
-            resolve(JSON.parse(body));
-          } else {
-            resolve(body);
-          }
+          return resolve(buffer);
         }
+        let body = Buffer.concat(buffer).toString("utf8");
+        body = type === "json" ? JSON.parse(body) : body;
+        resolve(body);
       });
     });
   }

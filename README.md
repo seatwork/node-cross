@@ -1,15 +1,15 @@
 # Micro-spark
 
-Small but complete http server framework without any external dependencies.
+A tiny but complete http server framework without any external dependencies.
 
 ### Get started
 
 ```js
-import { Spark } from "../app.js";
+const Spark = require("micro-spark");
 
 new Spark()
-  .static("/assets/*")
-  .plugin("db", {
+  .serve("/assets/*")
+  .declare("db", {
     // register a plugin to "ctx"
     query: (user) => {}
   })
@@ -35,8 +35,8 @@ new Spark()
 
 ### Constructor
 
-- `app.plugin(name, dest)`
-- `app.static(path)`
+- `app.declare(name, dest)`
+- `app.serve(path)`
 - `app.before(function)`
 - `app.after(function)`
 - `app.all(path, handle)`
@@ -55,6 +55,7 @@ new Spark()
 - `ctx.url` Get request full href
 - `ctx.protocol` Get request protocol
 - `ctx.host` Get request host
+- `ctx.hostname` Get request hostname
 - `ctx.origin` Get request origin
 - `ctx.headers` Get headers object
 - `ctx.cookies` Get cookies object
@@ -71,12 +72,12 @@ new Spark()
 - `async ctx.json()` Get request body in json
 - `async ctx.text()` Get request body in text
 - `async ctx.buffer()` Get request body in buffer
-- `ctx.send(body, status)` Send response to client
+- `ctx.send(body[, status])` Send response to client with status default 200
 - `ctx.redirect(url[, status])` Redirect url with status default 301
 - `ctx.view(path, data)` Render template with a file
-- `ctx.render(tmpl, data = {})` Render template with plaintext
+- `ctx.render(tmpl, data)` Render template with plaintext
 - `ctx.throw(message, status)` Throw an error with status code
 
-### Template Engine
+### Template Syntax
 
-See https://github.com/olado/doT
+The built-in template engine of the framework is doT. Please refer to the syntax for details: https://github.com/olado/doT

@@ -1,8 +1,9 @@
-import { Router } from "./router.js";
-import { Server } from "./server.js";
+const Router = require("./router");
+const Server = require("./server");
 
 // Spark framework entry
-export class Spark {
+// to setup runtime container
+module.exports = class Spark {
 
   #plugins = {};
   #befores = [];
@@ -14,15 +15,16 @@ export class Spark {
   get befores() { return this.#befores; }
   get afters() { return this.#afters; }
   get router() { return this.#router; }
+  get dispatch() { return this.#server.dispatch; }
 
-  // Run the server on the specified port
+  // Run server on the specified port
   listen(port) {
     this.#server.run(port);
     return this;
   }
 
   // Declare plugins
-  plugin(name, dest) {
+  declare(name, dest) {
     if (this.#plugins[name]) {
       throw new Error(`The plugin name "${name}" has been declared`);
     }
@@ -43,45 +45,45 @@ export class Spark {
   }
 
   // Add static resources handler
-  static(path) {
+  serve(path) {
     this.#router.add({
       method: "GET", path,
-      callback: this.#server.handleStatic
+      callback: this.#server.serve
     });
     return this;
   }
 
-  // Add route for all methods
-  all(path, callback) {
-    return this.#request("ALL")(path, callback);
+  // Add route for request methods
+  all(path, fn) {
+    return this.#request("ALL")(path, fn);
   }
 
-  get(path, callback) {
-    return this.#request("GET")(path, callback);
+  get(path, fn) {
+    return this.#request("GET")(path, fn);
   }
 
-  post(path, callback) {
-    return this.#request("POST")(path, callback);
+  post(path, fn) {
+    return this.#request("POST")(path, fn);
   }
 
-  put(path, callback) {
-    return this.#request("PUT")(path, callback);
+  put(path, fn) {
+    return this.#request("PUT")(path, fn);
   }
 
-  delete(path, callback) {
-    return this.#request("DELETE")(path, callback);
+  delete(path, fn) {
+    return this.#request("DELETE")(path, fn);
   }
 
-  patch(path, callback) {
-    return this.#request("PATCH")(path, callback);
+  patch(path, fn) {
+    return this.#request("PATCH")(path, fn);
   }
 
-  head(path, callback) {
-    return this.#request("HEAD")(path, callback);
+  head(path, fn) {
+    return this.#request("HEAD")(path, fn);
   }
 
-  options(path, callback) {
-    return this.#request("OPTIONS")(path, callback);
+  options(path, fn) {
+    return this.#request("OPTIONS")(path, fn);
   }
 
   #request(method) {

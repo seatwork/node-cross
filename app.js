@@ -5,6 +5,7 @@ const Server = require("./server.js");
 // to setup runtime container
 module.exports = class Spark {
 
+  #errorHandler;
   #engineOptions;
   #plugins = {};
   #befores = [];
@@ -12,6 +13,7 @@ module.exports = class Spark {
   #router = new Router();
   #server = new Server(this);
 
+  get errorHandler() { return this.#errorHandler; }
   get engineOptions() { return this.#engineOptions; }
   get plugins() { return this.#plugins; }
   get befores() { return this.#befores; }
@@ -58,6 +60,11 @@ module.exports = class Spark {
   // Set engine options
   engine(options) {
     this.#engineOptions = options;
+  }
+
+  // Set error handler
+  error(handler) {
+    this.#errorHandler = handler;
   }
 
   // Add route for request methods

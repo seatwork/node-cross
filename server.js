@@ -1,4 +1,4 @@
-const Http = require("http");
+const http = require("http");
 const fs = require("fs");
 const { extname, resolve } = require("path");
 const engine = require("./engine.js");
@@ -68,8 +68,7 @@ module.exports = class Server {
   // Create http server on default port 3000
   run(port = 3000) {
     Object.assign(engine.defaults, this.#app.engineOptions);
-
-    const server = Http.createServer(this.#dispatch.bind(this));
+    const server = http.createServer(this.#dispatch.bind(this));
     server.listen(port, () => {
       console.log(`\x1b[90m[Spark] Node version: ${process.version}\x1b[0m`);
       console.log(`\x1b[90m[Spark] Reference: https://github.com/seatwork/node-spark\x1b[0m`);
@@ -86,6 +85,7 @@ module.exports = class Server {
       return engine(source, data);
     }
 
+    let body = null;
     try {
       const route =
         this.#app.router.find(ctx.method, ctx.path) ||
@@ -96,16 +96,23 @@ module.exports = class Server {
         this.#declarePlugins(ctx);
 
         await this.#executeBefores(ctx);
-        ctx.body = await route.callback(ctx);
+        body = await route.callback(ctx);
         await this.#executeAfters(ctx);
-        ctx.send(ctx.body);
       } else {
         ctx.throw("Route not found: " + ctx.path, 404);
       }
     } catch (e) {
-      console.error("\x1b[31m[Spark]", e, "\x1b[0m");
-      ctx.send(e.message, e.status || 500);
+      ctx.error = e;
+      ctx.status = e.status || 500;
+
+      if (this.#app.errorHandler) {
+        body = await this.#app.errorHandler(ctx);
+      } else {
+        body = e.message || "Internal Server Error";
+        console.error("\x1b[31m[Spark]", e, "\x1b[0m");
+      }
     }
+    ctx.send(body);
   }
 
   // Handle static resource requests

@@ -75,9 +75,14 @@ new Spark()
 - `ctx.send(body[, status])` Send response to client with status default 200
 - `ctx.redirect(url[, status])` Redirect url with status default 301
 - `ctx.view(path, data)` Render template with a file
-- `ctx.render(tmpl, data)` Render template with plaintext
 - `ctx.throw(message, status)` Throw an error with status code
 
 ### Template Syntax
 
-The built-in template engine of the framework is doT. Please refer to the syntax for details: https://github.com/olado/doT
+- `{{> file }}` Include partial file
+- `{{# name }} {{# }}` Define block with name
+- `{{## name }}` Use block with name
+- `{{ evaluate }}`
+- `{{= interpolate }}`
+- `{{? conditional }} {{?? }} {{? }}`
+- `{{~ iterate:value:index }} {{~ }}`

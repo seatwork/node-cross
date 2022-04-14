@@ -1,5 +1,5 @@
-const Router = require("./router");
-const Server = require("./server");
+const Router = require("./router.js");
+const Server = require("./server.js");
 
 // Spark framework entry
 // to setup runtime container

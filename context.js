@@ -1,7 +1,4 @@
-const fs = require("fs");
-const { resolve } = require("path");
 const { Stream } = require("stream");
-const { template } = require("./engine");
 
 // Context of application
 // extends request and response
@@ -183,21 +180,6 @@ module.exports = class Context {
   redirect(url, status = 301) {
     this.#response.writeHead(status, { Location: url });
     this.#response.end();
-  }
-
-  // Render template with a file
-  view(path, data = {}) {
-    path = resolve(path.replace(/^\/+/, ""));
-    const tmpl = fs.readFileSync(path);
-    this.set("Content-Type", "text/html; charset=utf-8");
-    return this.render(tmpl, data);
-  }
-
-  // Render template with plaintext
-  render(tmpl, data = {}) {
-    // ignores the default argName "it"
-    const fn = template(tmpl, { argName: Object.keys(data) });
-    return fn(data);
   }
 
   // Throw an error with status code

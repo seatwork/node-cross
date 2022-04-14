@@ -1,6 +1,7 @@
 const Http = require("http");
 const fs = require("fs");
 const { extname, resolve } = require("path");
+const engine = require("./engine.js");
 const Context = require("./context.js");
 
 const MIME = {
@@ -66,6 +67,8 @@ module.exports = class Server {
 
   // Create http server on default port 3000
   run(port = 3000) {
+    Object.assign(engine.defaults, this.#app.engineOptions);
+
     const server = Http.createServer(this.#dispatch.bind(this));
     server.listen(port, () => {
       console.log(`\x1b[90m[Spark] Node version: ${process.version}\x1b[0m`);
@@ -77,6 +80,12 @@ module.exports = class Server {
   // Handle dynamic requests
   async #dispatch(request, response) {
     const ctx = new Context(request, response);
+    // Add template renderer
+    ctx.view = (source, data = {}) => {
+      ctx.set("Content-Type", "text/html; charset=utf-8");
+      return engine(source, data);
+    }
+
     try {
       const route =
         this.#app.router.find(ctx.method, ctx.path) ||

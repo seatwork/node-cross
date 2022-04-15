@@ -1,47 +1,35 @@
-# Micro-spark
+# Node-Cross
 
 A tiny but complete http server framework without any external dependencies.
 
 ### Get started
 
 ```js
-const Spark = require("micro-spark");
+const Cross = require("node-cross");
 
-new Spark()
+new Cross()
   .serve("/assets/*")
-  .declare("db", {
-    // register a plugin to "ctx"
-    query: (user) => {}
-  })
-  .before(ctx => {
-    // dosomething before route executed
-  })
-  .after(ctx => {
-    // dosomething after route executed
-  })
-  .get("/:name", ctx => {
-    return ctx.params.name;
-  })
-  .get("/tmpl", ctx => {
-    return ctx.render("<div>hello, {{= name}}</div>", { name: "world" });
-  })
-  .get("/tmplfile", ctx => {
-    return ctx.view("tmpl.html", { name: "world" });
-  })
+  .template({})
+  .define("db", {})
+  .before(ctx => {})
+  .after(ctx => {})
+  .error(ctx => {})
+  .get("/", ctx => {})
   .listen();
 ```
 
 ## API Reference
 
-### Constructor
+### Methods
 
-- `app.declare(name, dest)`
-- `app.serve(path)`
-- `app.before(function)`
-- `app.after(function)`
-- `app.all(path, handle)`
-- `app.get(path, handle)`
-- `app.post(path, handle)`
+- `app.serve(path)` Serve static resources
+- `app.template(options)` Set template options `{ strip, root, imports }`
+- `app.define(name, obj)` Define a plugin to context instance
+- `app.before(function)` Define a middleware before route executed
+- `app.after(function)` Define a middleware after route executed
+- `app.all(path[, tmpl], handle)`
+- `app.get(path[, tmpl], handle)`
+- `app.post(path[, tmpl], handle)`
 - ...
 
 ### Context

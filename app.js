@@ -1,24 +1,39 @@
 const Router = require("./router.js");
+const Engine = require("./engine.js");
 const Server = require("./server.js");
 
-// Spark framework entry
-// to setup runtime container
-module.exports = class Spark {
+/**
+ * Http server framework entry
+ * to setup runtime container
+ */
+module.exports = class {
 
-  #errorHandler;
-  #engineOptions;
   #plugins = {};
   #befores = [];
   #afters = [];
+  #errorRoute;
+
   #router = new Router();
+  #engine = new Engine();
   #server = new Server(this);
 
-  get errorHandler() { return this.#errorHandler; }
-  get engineOptions() { return this.#engineOptions; }
+  constructor() {
+    this.all = this.#add("");
+    this.get = this.#add("GET");
+    this.post = this.#add("POST");
+    this.put = this.#add("PUT");
+    this.delete = this.#add("DELETE");
+    this.patch = this.#add("PATCH");
+    this.head = this.#add("HEAD");
+    this.options = this.#add("OPTIONS");
+  }
+
   get plugins() { return this.#plugins; }
   get befores() { return this.#befores; }
   get afters() { return this.#afters; }
   get router() { return this.#router; }
+  get engine() { return this.#engine; }
+  get errorRoute() { return this.#errorRoute; }
   get dispatch() { return this.#server.dispatch; }
 
   // Run server on the specified port
@@ -27,12 +42,12 @@ module.exports = class Spark {
     return this;
   }
 
-  // Declare plugins
-  declare(name, dest) {
+  // Define plugins
+  define(name, object) {
     if (this.#plugins[name]) {
-      throw new Error(`The plugin name "${name}" has been declared`);
+      throw new Error(`The plugin name "${name}" has been defined`);
     }
-    this.#plugins[name] = dest;
+    this.#plugins[name] = object;
     return this;
   }
 
@@ -48,61 +63,36 @@ module.exports = class Spark {
     return this;
   }
 
-  // Add static resources handler
+  // Serve static resources
   serve(path) {
-    this.#router.add({
-      method: "GET", path,
-      callback: this.#server.serve
-    });
+    this.#router.add({ method: "GET", path, handler: this.#server.serve });
     return this;
   }
 
   // Set engine options
-  engine(options) {
-    this.#engineOptions = options;
+  template(options) {
+    this.#engine.default(options);
+    return this;
   }
 
   // Set error handler
-  error(handler) {
-    this.#errorHandler = handler;
+  error(tmpl, handler) {
+    if (!handler) {
+      handler = tmpl;
+      tmpl = null;
+    }
+    this.#errorRoute = { tmpl, handler };
+    return this;
   }
 
-  // Add route for request methods
-  all(path, fn) {
-    return this.#request("ALL")(path, fn);
-  }
-
-  get(path, fn) {
-    return this.#request("GET")(path, fn);
-  }
-
-  post(path, fn) {
-    return this.#request("POST")(path, fn);
-  }
-
-  put(path, fn) {
-    return this.#request("PUT")(path, fn);
-  }
-
-  delete(path, fn) {
-    return this.#request("DELETE")(path, fn);
-  }
-
-  patch(path, fn) {
-    return this.#request("PATCH")(path, fn);
-  }
-
-  head(path, fn) {
-    return this.#request("HEAD")(path, fn);
-  }
-
-  options(path, fn) {
-    return this.#request("OPTIONS")(path, fn);
-  }
-
-  #request(method) {
-    return (path, callback) => {
-      this.#router.add({ method, path, callback });
+  // Add routes
+  #add(method) {
+    return (path, tmpl, handler) => {
+      if (!handler) {
+        handler = tmpl;
+        tmpl = null;
+      }
+      this.#router.add({ method, path, tmpl, handler });
       return this;
     }
   }

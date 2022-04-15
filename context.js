@@ -1,7 +1,9 @@
 const { Stream } = require("stream");
 
-// Context of application
-// extends request and response
+/**
+ * Context of application
+ * extends request and response
+ */
 module.exports = class Context {
 
   #request;

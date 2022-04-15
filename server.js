@@ -1,7 +1,6 @@
 const http = require("http");
 const fs = require("fs");
 const { extname, resolve } = require("path");
-const engine = require("./engine.js");
 const Context = require("./context.js");
 
 const MIME = {
@@ -56,8 +55,10 @@ const MIME = {
   ".zip": "application/zip",
 };
 
-// HTTP server class
-// for handling requests and static resources
+/**
+ * HTTP server class
+ * for handling requests and static resources
+ */
 module.exports = class Server {
   #app;
 
@@ -67,36 +68,27 @@ module.exports = class Server {
 
   // Create http server on default port 3000
   run(port = 3000) {
-    Object.assign(engine.defaults, this.#app.engineOptions);
     const server = http.createServer(this.#dispatch.bind(this));
     server.listen(port, () => {
-      console.log(`\x1b[90m[Spark] Node version: ${process.version}\x1b[0m`);
-      console.log(`\x1b[90m[Spark] Reference: https://github.com/seatwork/node-spark\x1b[0m`);
-      console.log(`[Spark] Server is running at \x1b[4m\x1b[36mhttp://localhost:${port}\x1b[0m`);
+      console.log(`\x1b[90m[Cross] Node version: ${process.version}\x1b[0m`);
+      console.log(`\x1b[90m[Cross] Reference: https://github.com/seatwork/node-cross\x1b[0m`);
+      console.log(`[Cross] Server is running at \x1b[4m\x1b[36mhttp://localhost:${port}\x1b[0m`);
     });
   }
 
   // Handle dynamic requests
   async #dispatch(request, response) {
     const ctx = new Context(request, response);
-    // Add template renderer
-    ctx.view = (source, data = {}) => {
-      ctx.set("Content-Type", "text/html; charset=utf-8");
-      return engine(source, data);
-    }
-
     let body = null;
-    try {
-      const route =
-        this.#app.router.find(ctx.method, ctx.path) ||
-        this.#app.router.find("ALL", ctx.path);
 
+    try {
+      const route = this.#app.router.find(ctx.method, ctx.path);
       if (route) {
         ctx.params = route.params;
-        this.#declarePlugins(ctx);
+        this.#definePlugins(ctx);
 
         await this.#executeBefores(ctx);
-        body = await route.callback(ctx);
+        body = await this.#perform(route, ctx);
         await this.#executeAfters(ctx);
       } else {
         ctx.throw("Route not found: " + ctx.path, 404);
@@ -105,14 +97,24 @@ module.exports = class Server {
       ctx.error = e;
       ctx.status = e.status || 500;
 
-      if (this.#app.errorHandler) {
-        body = await this.#app.errorHandler(ctx);
+      if (this.#app.errorRoute) {
+        body = await this.#perform(this.#app.errorRoute, ctx);
       } else {
         body = e.message || "Internal Server Error";
-        console.error("\x1b[31m[Spark]", e, "\x1b[0m");
+        console.error("\x1b[31m[Cross]", e, "\x1b[0m");
       }
     }
     ctx.send(body);
+  }
+
+  // Perform route callback
+  async #perform(route, ctx) {
+    let result = await route.handler(ctx);
+    if (route.tmpl) {
+      ctx.set("Content-Type", "text/html; charset=utf-8");
+      result = this.#app.engine.view(route.tmpl, result);
+    }
+    return result;
   }
 
   // Handle static resource requests
@@ -150,8 +152,8 @@ module.exports = class Server {
     }
   }
 
-  // Declare plugins to ctx
-  #declarePlugins(ctx) {
+  // Define plugins to ctx
+  #definePlugins(ctx) {
     const plugins = this.#app.plugins;
     Object.keys(plugins).forEach(name => {
       if (ctx[name]) {

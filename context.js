@@ -51,12 +51,12 @@ module.exports = class Context {
 
   // Get request full href
   get url() {
-    return this.protocol + "://" + this.host + this.#request.url;
+    return this.protocol + "://" + this.host + decodeURI(this.#request.url);
   }
 
   // Get request path
   get path() {
-    return this.#url.pathname;
+    return decodeURI(this.#url.pathname);
   }
 
   // Get request origin

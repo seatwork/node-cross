@@ -1,8 +1,8 @@
 const { Stream } = require("stream");
 
 /**
- * Context of application
- * extends request and response
+ * The context of application
+ * Extensions to Requests and Responses
  */
 module.exports = class Context {
 
@@ -10,6 +10,7 @@ module.exports = class Context {
   #response;
   #url;
   #status;
+  #body;
 
   #params = {};
   #query = {};
@@ -22,51 +23,6 @@ module.exports = class Context {
     for (const [k, v] of this.#url.searchParams) {
       this.#query[k] = v;
     }
-  }
-
-  // Get native request object
-  get request() {
-    return this.#request;
-  }
-
-  // Get native response object
-  get response() {
-    return this.#response;
-  }
-
-  // Get request method
-  get method() {
-    return this.#request.method;
-  }
-
-  // Get request protocol
-  get protocol() {
-    return this.#getProtocol(this.#request);
-  }
-
-  // Get host in request headers
-  get host() {
-    return this.#request.headers.host;
-  }
-
-  // Get request full href
-  get url() {
-    return this.protocol + "://" + this.host + decodeURI(this.#request.url);
-  }
-
-  // Get request path
-  get path() {
-    return decodeURI(this.#url.pathname);
-  }
-
-  // Get request origin
-  get origin() {
-    return this.#url.origin;
-  }
-
-  // Get request hostname
-  get hostname() {
-    return this.#url.hostname;
   }
 
   // Set params in route path
@@ -82,6 +38,64 @@ module.exports = class Context {
   // Get params in query string
   get query() {
     return this.#query;
+  }
+
+  // Set response status code
+  set status(status) {
+    this.#status = status;
+  }
+
+  // Get response status code
+  get status() {
+    const s = parseInt(this.#status);
+    return (isNaN(s) || s < 200 || s > 511) ? 200 : s;
+  }
+
+  // Set response body
+  set body(body) {
+    this.#body = body;
+  }
+
+  // Get response body
+  get body() {
+    return this.#body;
+  }
+
+  // Get request method
+  get method() {
+    return this.#request.method;
+  }
+
+  // Get request protocol
+  get protocol() {
+    let proto = this.#request.connection.encrypted ? "https" : "http";
+    proto = this.headers["x-forwarded-proto"] || proto;
+    return proto.split(",")[0];
+  }
+
+  // Get host in request headers
+  get host() {
+    return this.headers.host;
+  }
+
+  // Get request full href
+  get url() {
+    return this.protocol + "://" + this.host + decodeURI(this.#request.url);
+  }
+
+  // Get request pathname
+  get path() {
+    return decodeURI(this.#url.pathname);
+  }
+
+  // Get request origin
+  get origin() {
+    return this.#url.origin;
+  }
+
+  // Get request hostname
+  get hostname() {
+    return this.#url.hostname;
   }
 
   // Get all request headers
@@ -104,17 +118,6 @@ module.exports = class Context {
     return cookies;
   }
 
-  // Set response status code
-  set status(status) {
-    this.#status = status;
-  }
-
-  // Get response status code
-  get status() {
-    const s = parseInt(this.#status);
-    return (isNaN(s) || s < 200 || s > 511) ? 200 : s;
-  }
-
   // Set cookie (set value with null to delete cookie)
   cookie(name, value, options = {}) {
     const cookies = [`${name}=${value}`];
@@ -133,14 +136,14 @@ module.exports = class Context {
     this.set("Set-Cookie", cookies.join("; "));
   }
 
-  // Get request headers by name
-  get(name) {
-    return this.headers[name];
-  }
-
   // Set response headers
   set(name, value) {
     this.#response.setHeader(name, value);
+  }
+
+  // Get request headers by name
+  get(name) {
+    return this.headers[name];
   }
 
   // Get request body in json
@@ -159,10 +162,10 @@ module.exports = class Context {
   }
 
   // Send response to client
-  send(body, status) {
+  end() {
     if (this.#response.headersSent) return;
-    status = status || this.status;
-    this.#response.statusCode = status;
+    const status = this.#response.statusCode = this.status;
+    const body = this.body;
 
     if (body === undefined || body === null || status === 204 || status === 304) {
       return this.#response.end();
@@ -189,13 +192,6 @@ module.exports = class Context {
     const error = new Error(message);
     error.status = status;
     throw error;
-  }
-
-  // Get request protocol
-  #getProtocol(req) {
-    let proto = req.connection.encrypted ? "https" : "http";
-    proto = req.headers["x-forwarded-proto"] || proto; // only do this if you trust the proxy
-    return proto.split(",")[0];
   }
 
   // Parse raw body

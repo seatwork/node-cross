@@ -27,7 +27,7 @@ module.exports = class Engine {
     imports: {}
   };
 
-  default(options) {
+  constructor(options) {
     Object.assign(this.#defaults, options);
   }
 
@@ -142,4 +142,4 @@ module.exports = class Engine {
     return code.replace(/\\('|\\)/g, "$1").replace(/[\r\t\n]/g, " ");
   }
 
-};
+}

@@ -1,6 +1,6 @@
 # Node-Cross
 
-Cross is a tiny but complete http server framework without any external dependencies. Its features include: static resource request handling, dynamic routing request handling, middleware, template engine, application context, etc.
+Cross is a tiny but complete http server framework without any external dependencies. Its features include: static resource request handling, dynamic route request handling, middleware, template engine, application context, etc.
 
 ### Get started
 
@@ -28,7 +28,6 @@ new Cross()
 standard request methods, it will auto-render template if `tmpl` exists.
 - `app.listen([port])` Create and start an application server on the specified port.
 - `app.callback()` Return a request handler for node's native http server.
-- ...
 
 ### Context
 

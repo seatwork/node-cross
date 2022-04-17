@@ -3,91 +3,84 @@ const { join, resolve, extname } = require("path");
 const Engine = require("./engine.js");
 
 /**
- * Built-in middlewares
+ * Router middleware
+ * @param {Router} router
+ * @returns
  */
-module.exports = {
-
-  /**
-   * Router middleware
-   * @param {Router} router
-   * @returns
-   */
-  lookup(router) {
-    return async (ctx, next) => {
-      const route = router.find(ctx.method, ctx.path);
-      if (!route) {
-        ctx.throw("Route not found: " + ctx.path, 404);
-      }
-
-      ctx.params = route.params;
-      ctx.body = await route.handler(ctx);
-      if (route.tmpl) {
-        ctx.body = ctx.view(route.tmpl, ctx.body);
-      }
-      await next();
+exports.lookup = (router) => {
+  return async (ctx, next) => {
+    const route = router.find(ctx.method, ctx.path);
+    if (!route) {
+      ctx.throw("Route not found: " + ctx.path, 404);
     }
-  },
 
-  /**
-   * Serve static resources
-   * @param {string} root
-   * @returns
-   */
-  static(root) {
-    return async (ctx, next) => {
-      // Removes the leading slash and converts absolute path to relative path
-      root = join(root, "/").replace(/^\/+/, "");
-      const path = ctx.path.replace(/^\/+/, "");
-      if (!path.startsWith(root)) return await next();
+    ctx.params = route.params;
+    ctx.body = await route.handler(ctx);
+    if (ctx.view && route.tmpl) {
+      ctx.body = ctx.view(route.tmpl, ctx.body);
+    }
+    await next();
+  }
+}
 
-      const file = resolve(path);
-      if (!fs.existsSync(file)) {
-        ctx.throw("Resource not found: " + ctx.path, 404);
-      }
-      const stat = fs.statSync(file);
-      if (stat.isDirectory()) {
-        ctx.throw("Resource not found: " + ctx.path, 406); // NOT_ACCEPTABLE
-      }
-      const mime = MIME[extname(file)];
-      if (mime) {
-        ctx.set("Content-Type", mime);
-      }
+/**
+ * Serve static resources
+ * @param {string} root
+ * @returns
+ */
+exports.static = (root) => {
+  return async (ctx, next) => {
+    // Removes the leading slash and converts absolute path to relative path
+    root = join(root, "/").replace(/^\/+/, "");
+    const path = ctx.path.replace(/^\/+/, "");
+    if (!path.startsWith(root)) return await next();
 
-      // Handling 304 status with negotiation cache
-      // : if-modified-since / Last-Modified
-      if (stat.mtime) {
-        const lastModified = stat.mtime instanceof Date
-          ? stat.mtime.toUTCString() : new Date(stat.mtime).toUTCString();
+    const file = resolve(path);
+    if (!fs.existsSync(file)) {
+      ctx.throw("Resource not found: " + ctx.path, 404);
+    }
+    const stat = fs.statSync(file);
+    if (stat.isDirectory()) {
+      ctx.throw("Resource not found: " + ctx.path, 406); // NOT_ACCEPTABLE
+    }
+    const mime = MIME[extname(file)];
+    if (mime) {
+      ctx.set("Content-Type", mime);
+    }
 
-        if (ctx.get("if-modified-since") == lastModified) {
-          ctx.status = 304;
-        } else {
-          ctx.set("Last-Modified", lastModified);
-          ctx.body = fs.readFileSync(file);
-        }
+    // Handling 304 status with negotiation cache
+    // : if-modified-since / Last-Modified
+    if (stat.mtime) {
+      const lastModified = stat.mtime instanceof Date
+        ? stat.mtime.toUTCString() : new Date(stat.mtime).toUTCString();
+
+      if (ctx.get("if-modified-since") == lastModified) {
+        ctx.status = 304;
       } else {
+        ctx.set("Last-Modified", lastModified);
         ctx.body = fs.readFileSync(file);
       }
-    }
-  },
-
-  /**
-   * Template engine middleware
-   * @param {object} options
-   * @returns
-   */
-  engine(options) {
-    const engine = new Engine(options);
-    return async (ctx, next) => {
-      ctx.render = engine.render.bind(engine);
-      ctx.view = (tmpl, data) => {
-        ctx.set("Content-Type", "text/html; charset=utf-8");
-        return engine.view(tmpl, data);
-      };
-      await next();
+    } else {
+      ctx.body = fs.readFileSync(file);
     }
   }
+}
 
+/**
+ * Template engine middleware
+ * @param {object} options
+ * @returns
+ */
+exports.engine = (options) => {
+  const engine = new Engine(options);
+  return async (ctx, next) => {
+    ctx.render = engine.render.bind(engine);
+    ctx.view = (tmpl, data) => {
+      ctx.set("Content-Type", "text/html; charset=utf-8");
+      return engine.view(tmpl, data);
+    };
+    await next();
+  }
 }
 
 const MIME = {

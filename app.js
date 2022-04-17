@@ -27,9 +27,6 @@ module.exports = class extends Emitter {
     this.head = this.#add("HEAD");
     this.options = this.#add("OPTIONS");
     this.patch = this.#add("PATCH");
-
-    // Use route middleware
-    this.use(middleware.lookup(this.#router));
   }
 
   /**
@@ -80,14 +77,14 @@ module.exports = class extends Emitter {
    * @returns {Function}
    */
   callback() {
+    // Use route middleware
+    this.use(middleware.lookup(this.#router));
     const fn = this.#compose(this.#middleware);
-    if (!this.listenerCount("error")) {
-      this.on("error", this.#onerror); // Set default error handler
-    }
 
+    // Native http server handler
     return (req, res) => {
       const ctx = new Context(req, res);
-      const onerror = err => this.emit("error", err, ctx);
+      const onerror = err => this.#onerror(err, ctx);
       const respond = () => ctx.end();
       fn(ctx).catch(onerror).finally(respond);
     }
@@ -145,14 +142,19 @@ module.exports = class extends Emitter {
   }
 
   /**
-   * Default error handler
+   * Error handler
    * @param {Error} err
    * @param {Context} ctx
    */
   #onerror(err, ctx) {
     ctx.status = err.status || 500;
     ctx.body = err.message || "Internal Server Error";
-    console.error("\x1b[31m[Cross]", err, "\x1b[0m");
+
+    if (this.listenerCount("error")) {
+      this.emit("error", err, ctx);
+    } else {
+      console.error("\x1b[31m[Cross]", err, "\x1b[0m");
+    }
   }
 
 }

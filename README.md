@@ -5,7 +5,7 @@ Cross is a tiny but complete http server framework without any external dependen
 - [x] Application context
 - [x] Middleware like Koa.js
 - [x] Built-in static service
-- [x] Built-in router service
+- [x] Built-in routing service
 - [x] Built-in template engine
 
 ### Get started

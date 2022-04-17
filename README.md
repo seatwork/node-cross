@@ -1,6 +1,6 @@
 # Node-Cross
 
-A tiny but complete http server framework without any external dependencies.
+Cross is a tiny but complete http server framework without any external dependencies. Its features include: static resource request handling, dynamic routing request handling, middleware, template engine, application context, etc.
 
 ### Get started
 
@@ -8,12 +8,10 @@ A tiny but complete http server framework without any external dependencies.
 const Cross = require("node-cross");
 
 new Cross()
-  .serve("/assets/*")
-  .template({})
-  .define("db", {})
-  .before(ctx => {})
-  .after(ctx => {})
-  .error(ctx => {})
+  .engine({})
+  .static("/assets")
+  .on("error", (err, ctx) => {})
+  .use(ctx => {})
   .get("/", ctx => {})
   .listen();
 ```
@@ -22,14 +20,14 @@ new Cross()
 
 ### Methods
 
-- `app.serve(path)` Serve static resources
-- `app.template(options)` Set template options `{ strip, root, imports }`
-- `app.define(name, obj)` Define a plugin to context instance
-- `app.before(function)` Define a middleware before route executed
-- `app.after(function)` Define a middleware after route executed
-- `app.all(path[, tmpl], handle)`
-- `app.get(path[, tmpl], handle)`
-- `app.post(path[, tmpl], handle)`
+- `app.engine(options)` Enable built-in template engine with options `{ strip, root, imports }`.
+- `app.static(path)` Serve static resources with the given `path`.
+- `app.on("error", function)` Custom unified error handling.
+- `app.use(function)` Add a middleware like koa.js.
+- `app.get(path, [tmpl,] function)` Add dynamic route including `post`, `put`, `delete` and other
+standard request methods, it will auto-render template if `tmpl` exists.
+- `app.listen([port])` Create and start an application server on the specified port.
+- `app.callback()` Return a request handler for node's native http server.
 - ...
 
 ### Context
@@ -49,8 +47,8 @@ new Cross()
 - `ctx.cookies` Get cookies object
 - `ctx.status` Get response status code
 - `ctx.status=` Set response status code
-- `ctx.request` The native request object
-- `ctx.response` The native response object
+- `ctx.body` Get response body
+- `ctx.body=` Set response body
 
 #### Methods
 
@@ -60,10 +58,18 @@ new Cross()
 - `async ctx.json()` Get request body in json
 - `async ctx.text()` Get request body in text
 - `async ctx.buffer()` Get request body in buffer
-- `ctx.send(body[, status])` Send response to client with status default 200
 - `ctx.redirect(url[, status])` Redirect url with status default 301
-- `ctx.view(path, data)` Render template with a file
+- `ctx.view(path, data)` Render template with a file, only if engine enabled.
+- `ctx.render(path, data)` Render template with a text, only if engine enabled.
 - `ctx.throw(message, status)` Throw an error with status code
+
+### Route Syntax
+
+- `/static` static route
+- `/*` Wildcard route, it will return `wildcard` variable in context.params
+- `/:user`
+- `/:user?`
+- `/:user(\\d+)`
 
 ### Template Syntax
 

@@ -78,7 +78,7 @@ standard request methods, it will auto-render template if `tmpl` exists.
 
 ### Template Syntax
 
-- `{{> file }}` Include partial file
+- `{{@ file }}` Include partial file
 - `{{# name }} {{# }}` Define block with name
 - `{{## name }}` Use block with name
 - `{{ evaluate }}`

@@ -1,6 +1,6 @@
 {
   "name": "node-cross",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A tiny but complete http server framework without any external dependencies.",
   "license": "MIT",
   "author": "Ai Chen",

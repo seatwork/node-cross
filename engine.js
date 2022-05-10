@@ -1,6 +1,16 @@
 const { readFileSync } = require("fs");
 const { resolve } = require("path");
 
+const syntax = {
+  PARTIAL: /\{\{@\s*(\S+?)\s*\}\}/g,
+  BLOCK: /\{\{#\s*(\S+?)\s*\}\}([\s\S]*?)\{\{#\s*\}\}/g,
+  BLOCKUSE: /\{\{##\s*(\S+?)\s*\}\}/g,
+  EVALUATE: /\{\{([\s\S]+?(\}?)+)\}\}/g,
+  INTERPOLATE: /\{\{=([\s\S]+?)\}\}/g,
+  CONDITIONAL: /\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
+  ITERATE: /\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
+}
+
 /**
  * Template engine - Modified from doT.js
  * Licensed under the MIT license.
@@ -8,19 +18,7 @@ const { resolve } = require("path");
  */
 module.exports = class Engine {
 
-  #prefix = "$$var_";
   #cache = {};
-
-  #syntax = {
-    partial: /\{\{>\s*(\S+?)\s*\}\}/g,
-    block: /\{\{##\s*(\S+?)\s*\}\}/g,
-    blockDefine: /\{\{#\s*(\S+?)\s*\}\}([\s\S]*?)\{\{#\s*\}\}/g,
-    evaluate: /\{\{([\s\S]+?(\}?)+)\}\}/g,
-    interpolate: /\{\{=([\s\S]+?)\}\}/g,
-    conditional: /\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
-    iterate: /\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
-  }
-
   #defaults = {
     strip: true,
     root: "",
@@ -62,39 +60,30 @@ module.exports = class Engine {
    * @returns
    */
   compile(tmpl) {
-    let sid = 0;
     tmpl = this.#block(tmpl);
-    tmpl = (
-      "let out='" +
-      (this.#defaults.strip
-        ? tmpl
-          .trim()
-          .replace(/<!--[\s\S]*?-->/g, "") // remove html comments
-          .replace(/\n\s*\/\/.*/g, "") // remove js comments in line
-          .replace(/[\t ]+(\r|\n)/g, "\n") // remove trailing spaces
-          .replace(/(\r|\n)[\t ]+/g, "") // leading spaces reduced to " "
-          .replace(/\r|\n|\t|\/\*[\s\S]*?\*\//g, "") // remove breaks, tabs and JS comments
-        : tmpl
-      )
-        .replace(/'|\\/g, "\\$&")
-        .replace(this.#syntax.interpolate, (_, code) => `'+(${this.#unescape(code)})+'`)
-        .replace(this.#syntax.conditional, (_, elseCase, code) => {
-          if (code) {
-            code = this.#unescape(code);
-            return elseCase ? `';}else if(${code}){out+='` : `';if(${code}){out+='`;
-          }
-          return elseCase ? "';}else{out+='" : "';}out+='";
-        })
-        .replace(this.#syntax.iterate, (_, arr, vName, iName) => {
-          if (!arr) return "';} } out+='";
-          sid++;
+    tmpl = this.#defaults.strip ? this.#strip(tmpl) : tmpl;
+    tmpl = tmpl
+      .replace(/'|\\/g, "\\$&")
+      .replace(syntax.INTERPOLATE, (_, code) => `'+(${this.#unescape(code)})+'`)
+      .replace(syntax.CONDITIONAL, (_, elseCase, code) => {
+        if (code) {
+          code = this.#unescape(code);
+          return this.#output(elseCase ? `}else if(${code}){` : `if(${code}){`);
+        }
+        return this.#output(elseCase ? "}else{ " : "}");
+      })
+      .replace(syntax.ITERATE, (_, arr, vName, iName) => {
+        if (arr) {
+          arr = this.#unescape(arr);
           const defI = iName ? `let ${iName}=-1;` : "";
           const incI = iName ? `${iName}++;` : "";
-          const val = this.#prefix + sid;
-          return `';const ${val}=${this.#unescape(arr)};if(${val}){${defI}for (const ${vName} of ${val}){${incI}out+='`;
-        })
-        .replace(this.#syntax.evaluate, (_, code) => `';${this.#unescape(code)}out+='`) + "';return out;"
-    )
+          return this.#output(`if(${arr}){${defI}for (const ${vName} of ${arr}){${incI}`);
+        }
+        return this.#output("}}");
+      })
+      .replace(syntax.EVALUATE, (_, code) => `${this.#output(this.#unescape(code))}`);
+
+    const funcBody = ("let out='" + tmpl + "';return out;")
       .replace(/\n/g, "\\n")
       .replace(/\t/g, "\\t")
       .replace(/\r/g, "\\r")
@@ -102,10 +91,10 @@ module.exports = class Engine {
       .replace(/\+''/g, "");
 
     try {
-      const fn = new Function(tmpl);
+      const fn = new Function(funcBody);
       return data => fn.apply(Object.assign({ ...this.#defaults.imports }, data));
     } catch (e) {
-      console.log("Could not create a template function:", tmpl);
+      console.log("Could not create template function:", funcBody);
       throw e;
     }
   }
@@ -117,8 +106,10 @@ module.exports = class Engine {
    */
   #include(file) {
     let tmpl = readFileSync(resolve(this.#defaults.root, file), "utf-8");
-    while (this.#syntax.partial.test(tmpl)) {
-      tmpl = tmpl.replace(this.#syntax.partial, (_, f) => readFileSync(resolve(this.#defaults.root, f), "utf-8"));
+    while (syntax.PARTIAL.test(tmpl)) {
+      tmpl = tmpl.replace(syntax.PARTIAL, (_, f) => {
+        return readFileSync(resolve(this.#defaults.root, f), "utf-8");
+      });
     }
     return tmpl;
   }
@@ -131,11 +122,26 @@ module.exports = class Engine {
   #block(tmpl) {
     const blocks = {};
     return tmpl
-      .replace(this.#syntax.blockDefine, (_, name, block) => {
-        blocks[name] = block;
-        return "";
-      })
-      .replace(this.#syntax.block, (_, name) => blocks[name]);
+      .replace(syntax.BLOCK, (_, name, block) => { blocks[name] = block; return ""; })
+      .replace(syntax.BLOCKUSE, (_, name) => blocks[name]);
+  }
+
+  /**
+   * Strip breaks, tabs and comments
+   * @param {string} tmpl
+   * @returns
+   */
+  #strip(tmpl) {
+    return tmpl.trim()
+      .replace(/<!--[\s\S]*?-->/g, "")            // remove html comments
+      .replace(/\n\s*\/\/.*/g, "")                // remove js comments inline
+      .replace(/[\t ]+(\r|\n)/g, "\n")            // remove trailing spaces
+      .replace(/(\r|\n)[\t ]+/g, "")              // remove leading spaces
+      .replace(/\r|\n|\t|\/\*[\s\S]*?\*\//g, "")  // remove breaks, tabs and js comments
+  }
+
+  #output(code) {
+    return `';${code}out+='`;
   }
 
   #unescape(code) {

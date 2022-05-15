@@ -205,7 +205,7 @@ module.exports = class Context {
           return resolve(buffer);
         }
         let body = Buffer.concat(buffer).toString("utf8");
-        body = type === "json" ? JSON.parse(body) : body;
+        body = body && type === "json" ? JSON.parse(body) : body;
         resolve(body);
       });
     });

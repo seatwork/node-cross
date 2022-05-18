@@ -138,7 +138,9 @@ module.exports = class Context {
 
   // Set response headers
   set(name, value) {
-    this.#response.setHeader(name, value);
+    if (!this.#response.getHeader(name)) {
+      this.#response.setHeader(name, value);
+    }
   }
 
   // Get request headers by name
